@@ -1,10 +1,8 @@
 package com.market.data;
 
 import com.google.gson.*;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.*;
-import net.minecraft.util.JsonHelper;
 
 import java.lang.reflect.Type;
 import java.util.Base64;
@@ -13,7 +11,6 @@ public class ItemStackAdapter implements JsonSerializer<ItemStack>, JsonDeserial
 
     @Override
     public JsonElement serialize(ItemStack src, Type typeOfSrc, JsonSerializationContext context) {
-        // 将 ItemStack 转为 NBT，再转为 Base64 字符串
         NbtCompound nbt = src.writeNbt(new NbtCompound());
         byte[] nbtBytes = nbt.toString().getBytes();
         String base64 = Base64.getEncoder().encodeToString(nbtBytes);
@@ -29,9 +26,10 @@ public class ItemStackAdapter implements JsonSerializer<ItemStack>, JsonDeserial
         String base64 = obj.get("data").getAsString();
         byte[] nbtBytes = Base64.getDecoder().decode(base64);
         try {
-            NbtCompound nbt = StringNbtReader.parse(new String(nbtBytes)).readCompoundTag();
+            NbtElement element = StringNbtReader.parse(new String(nbtBytes));
+            NbtCompound nbt = (NbtCompound) element;  // 正确转换
             return ItemStack.fromNbt(nbt);
-        } catch (CommandSyntaxException e) {
+        } catch (Exception e) {
             throw new JsonParseException(e);
         }
     }
