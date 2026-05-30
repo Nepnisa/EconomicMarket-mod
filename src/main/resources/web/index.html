@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>EconomicMarket</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1e1e2f, #2a2a40); color: #eee; min-height: 100vh; }
+        .card { background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); border-radius: 12px; padding: 15px; margin: 10px; color: #fff; }
+        .nav-pills .nav-link.active { background: #4caf50; }
+        .btn-buy { background: #4caf50; border: none; }
+        .btn-sell { background: #ff9800; border: none; }
+        .price-up { color: #55ff55; } .price-down { color: #ff5555; }
+        .lantern { color: #ffd700; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container py-4">
+        <div v-if="!user.loggedIn" class="card mx-auto" style="max-width: 400px; margin-top: 100px;">
+            <h4 class="mb-3">Minecraft 涓€閿櫥褰?/h4>
+            <div class="mb-3">
+                <input v-model="loginName" class="form-control" placeholder="杈撳叆鎮ㄧ殑 Minecraft 鐢ㄦ埛鍚? @keyup.enter="login"/>
+            </div>
+            <button class="btn btn-success w-100" @click="login" :disabled="loading">鐧诲綍</button>
+            <div class="text-danger mt-2" v-if="loginError">{{ loginError }}</div>
+        </div>
+        <div v-else>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>EconomicMarket</h2>
+                <span class="fw-bold text-warning">娆㈣繋, {{ user.name }} | {{ balance }} 缁垮疂鐭?/span>
+            </div>
+            <ul class="nav nav-pills mb-4">
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='market'}" @click="tab='market'; loadMarket(); loadInventory()" href="#">甯傚満</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='auction'}" @click="tab='auction'; loadAuction()" href="#">鎷嶅崠</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='stocks'}" @click="tab='stocks'; loadStocks()" href="#">鑲＄エ</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='leaderboard'}" @click="tab='leaderboard'; loadLeaderboard()" href="#">鎺掕姒?/a></li>
+            </ul>
+
+            <div v-if="tab==='market'">
+                <div class="card mb-3">
+                    <h5>涓婃灦鐗╁搧</h5>
+                    <div v-if="inventory.length === 0" class="text-muted">鑳屽寘涓病鏈夊彲涓婃灦鐨勭墿鍝?/div>
+                    <div v-for="item in inventory" :key="item.slot" class="d-flex align-items-center mb-2">
+                        <span class="me-3">{{ item.name }} x{{ item.count }}</span>
+                        <input v-model="item.sellPrice" class="form-control form-control-sm me-2" style="width: 100px;" placeholder="浠锋牸" type="number" min="1"/>
+                        <button class="btn btn-sm btn-sell" @click="sellItem(item.slot, item.sellPrice)">涓婃灦</button>
+                    </div>
+                </div>
+                <div class="card" v-for="item in marketItems" :key="item.id">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>{{item.name}} <small class="text-muted ms-2">鍗栧: {{item.seller}}</small></div>
+                        <div>
+                            <span class="text-success me-2">{{item.price}} E</span>
+                            <button class="btn btn-sm btn-success" @click="buyItem(item.id)">璐拱</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="tab==='auction'">
+                <div class="card" v-for="a in auctions" :key="a.id" :class="{'border-warning': a.skyLantern}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {{a.name}}
+                            <span v-if="a.skyLantern" class="lantern ms-2">鐐瑰ぉ鐏?/span>
+                            <small class="d-block text-muted">鍓╀綑 {{a.remain}} 绉?/small>
+                        </div>
+                        <div>
+                            <span class="me-2">褰撳墠: {{a.currentBid}} E</span>
+                            <button class="btn btn-sm btn-warning" @click="bid(a.id)">鍑轰环</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="tab==='stocks'">
+                <div class="card" v-for="s in stocks" :key="s.code">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><strong>{{s.name}}</strong> <small class="text-muted">({{s.code}})</small></div>
+                        <div>
+                            <span :class="s.change>=0?'price-up':'price-down'">{{s.price}} E ({{s.changePercent.toFixed(2)}}%)</span>
+                            <button class="btn btn-sm btn-success ms-2" @click="buyStock(s.code)">涔板叆</button>
+                            <button class="btn btn-sm btn-danger ms-1" @click="sellStock(s.code)">鍗栧嚭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="tab==='leaderboard'">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between" v-for="(e,i) in leaderboard" :key="i">
+                        <span>{{i+1}}. {{e.name}}</span>
+                        <span>{{e.balance}} E</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    loginName: '', loading: false, loginError: '',
+                    user: { loggedIn: false, uuid: '', name: '' },
+                    tab: 'market',
+                    marketItems: [], auctions: [], stocks: [], balance: 0, leaderboard: [],
+                    inventory: []
+                };
+            },
+            methods: {
+                async login() {
+                    if (!this.loginName) return;
+                    this.loading = true;
+                    try {
+                        const res = await axios.get('/api/auth?name=' + this.loginName);
+                        if (res.data.online) {
+                            this.user = { loggedIn: true, uuid: res.data.uuid, name: res.data.name };
+                            this.loadMarket();
+                            this.loadInventory();
+                            this.loadWallet();
+                        } else {
+                            this.loginError = '鐜╁涓嶅湪绾挎垨涓嶅瓨鍦?;
+                        }
+                    } catch(e) { this.loginError = '鏈嶅姟鍣ㄨ繛鎺ュけ璐?; }
+                    this.loading = false;
+                },
+                async loadInventory() {
+                    const r = await axios.get('/api/player/inventory?uuid=' + this.user.uuid);
+                    this.inventory = r.data.map(item => ({ ...item, sellPrice: 1 }));
+                },
+                async loadMarket() { const r = await axios.get('/api/market/list'); this.marketItems = r.data; },
+                async loadAuction() { const r = await axios.get('/api/auction/list'); this.auctions = r.data; },
+                async loadStocks() { const r = await axios.get('/api/stock/list'); this.stocks = r.data; },
+                async loadWallet() { const r = await axios.get('/api/wallet/balance?uuid='+this.user.uuid); this.balance = r.data.balance; },
+                async loadLeaderboard() { const r = await axios.get('/api/leaderboard'); this.leaderboard = r.data; },
+                async buyItem(id) {
+                    await axios.post('/api/market/buy', { playerUuid: this.user.uuid, itemId: id });
+                    this.loadMarket(); this.loadWallet(); this.loadInventory();
+                },
+                async sellItem(slot, price) {
+                    if (!price || price <= 0) { alert('浠锋牸蹇呴』澶т簬0'); return; }
+                    await axios.post('/api/market/sell', { playerUuid: this.user.uuid, slot: slot, price: parseInt(price) });
+                    this.loadMarket(); this.loadInventory();
+                },
+                async bid(id) {
+                    const amount = prompt('杈撳叆鍑轰环閲戦');
+                    if (!amount) return;
+                    await axios.post('/api/auction/bid', { playerUuid: this.user.uuid, auctionId: id, amount: parseInt(amount) });
+                    this.loadAuction(); this.loadWallet();
+                },
+                async buyStock(code) {
+                    await axios.post('/api/stock/buy', { playerUuid: this.user.uuid, code, qty: 1 });
+                    this.loadStocks(); this.loadWallet();
+                },
+                async sellStock(code) {
+                    await axios.post('/api/stock/sell', { playerUuid: this.user.uuid, code, qty: 1 });
+                    this.loadStocks(); this.loadWallet();
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

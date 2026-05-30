@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "economicmarket",
+  "version": "${version}",
+  "name": "EconomicMarket",
+  "description": "Browser-based economy mod using real inventory emeralds",
+  "icon": "assets/economicmarket/icon.png",
+  "entrypoints": {
+    "main": ["com.market.MarketMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.22",
+    "fabric-api": "*",
+    "minecraft": "1.20.1"
+  }
+}
