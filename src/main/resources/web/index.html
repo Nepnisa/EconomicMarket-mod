@@ -17,41 +17,41 @@
 <body>
     <div id="app" class="container py-4">
         <div v-if="!user.loggedIn" class="card mx-auto" style="max-width: 400px; margin-top: 100px;">
-            <h4 class="mb-3">Minecraft 涓€閿櫥褰?/h4>
+            <h4 class="mb-3">Minecraft 一键登录</h4>
             <div class="mb-3">
-                <input v-model="loginName" class="form-control" placeholder="杈撳叆鎮ㄧ殑 Minecraft 鐢ㄦ埛鍚? @keyup.enter="login"/>
+                <input v-model="loginName" class="form-control" placeholder="输入您的 Minecraft 用户名" @keyup.enter="login"/>
             </div>
-            <button class="btn btn-success w-100" @click="login" :disabled="loading">鐧诲綍</button>
+            <button class="btn btn-success w-100" @click="login" :disabled="loading">登录</button>
             <div class="text-danger mt-2" v-if="loginError">{{ loginError }}</div>
         </div>
         <div v-else>
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>EconomicMarket</h2>
-                <span class="fw-bold text-warning">娆㈣繋, {{ user.name }} | {{ balance }} 缁垮疂鐭?/span>
+                <span class="fw-bold text-warning">欢迎, {{ user.name }} | {{ balance }} 绿宝石</span>
             </div>
             <ul class="nav nav-pills mb-4">
-                <li class="nav-item"><a class="nav-link" :class="{active:tab==='market'}" @click="tab='market'; loadMarket(); loadInventory()" href="#">甯傚満</a></li>
-                <li class="nav-item"><a class="nav-link" :class="{active:tab==='auction'}" @click="tab='auction'; loadAuction()" href="#">鎷嶅崠</a></li>
-                <li class="nav-item"><a class="nav-link" :class="{active:tab==='stocks'}" @click="tab='stocks'; loadStocks()" href="#">鑲＄エ</a></li>
-                <li class="nav-item"><a class="nav-link" :class="{active:tab==='leaderboard'}" @click="tab='leaderboard'; loadLeaderboard()" href="#">鎺掕姒?/a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='market'}" @click="tab='market'; loadMarket(); loadInventory()" href="#">市场</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='auction'}" @click="tab='auction'; loadAuction()" href="#">拍卖</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='stocks'}" @click="tab='stocks'; loadStocks()" href="#">股票</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='leaderboard'}" @click="tab='leaderboard'; loadLeaderboard()" href="#">排行榜</a></li>
             </ul>
 
             <div v-if="tab==='market'">
                 <div class="card mb-3">
-                    <h5>涓婃灦鐗╁搧</h5>
-                    <div v-if="inventory.length === 0" class="text-muted">鑳屽寘涓病鏈夊彲涓婃灦鐨勭墿鍝?/div>
+                    <h5>上架物品</h5>
+                    <div v-if="inventory.length === 0" class="text-muted">背包中没有可上架的物品</div>
                     <div v-for="item in inventory" :key="item.slot" class="d-flex align-items-center mb-2">
                         <span class="me-3">{{ item.name }} x{{ item.count }}</span>
-                        <input v-model="item.sellPrice" class="form-control form-control-sm me-2" style="width: 100px;" placeholder="浠锋牸" type="number" min="1"/>
-                        <button class="btn btn-sm btn-sell" @click="sellItem(item.slot, item.sellPrice)">涓婃灦</button>
+                        <input v-model="item.sellPrice" class="form-control form-control-sm me-2" style="width: 100px;" placeholder="价格" type="number" min="1"/>
+                        <button class="btn btn-sm btn-sell" @click="sellItem(item.slot, item.sellPrice)">上架</button>
                     </div>
                 </div>
                 <div class="card" v-for="item in marketItems" :key="item.id">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>{{item.name}} <small class="text-muted ms-2">鍗栧: {{item.seller}}</small></div>
+                        <div>{{item.name}} <small class="text-muted ms-2">卖家: {{item.seller}}</small></div>
                         <div>
                             <span class="text-success me-2">{{item.price}} E</span>
-                            <button class="btn btn-sm btn-success" @click="buyItem(item.id)">璐拱</button>
+                            <button class="btn btn-sm btn-success" @click="buyItem(item.id)">购买</button>
                         </div>
                     </div>
                 </div>
@@ -62,12 +62,12 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             {{a.name}}
-                            <span v-if="a.skyLantern" class="lantern ms-2">鐐瑰ぉ鐏?/span>
-                            <small class="d-block text-muted">鍓╀綑 {{a.remain}} 绉?/small>
+                            <span v-if="a.skyLantern" class="lantern ms-2">点天灯</span>
+                            <small class="d-block text-muted">剩余 {{a.remain}} 秒</small>
                         </div>
                         <div>
-                            <span class="me-2">褰撳墠: {{a.currentBid}} E</span>
-                            <button class="btn btn-sm btn-warning" @click="bid(a.id)">鍑轰环</button>
+                            <span class="me-2">当前: {{a.currentBid}} E</span>
+                            <button class="btn btn-sm btn-warning" @click="bid(a.id)">出价</button>
                         </div>
                     </div>
                 </div>
@@ -79,8 +79,8 @@
                         <div><strong>{{s.name}}</strong> <small class="text-muted">({{s.code}})</small></div>
                         <div>
                             <span :class="s.change>=0?'price-up':'price-down'">{{s.price}} E ({{s.changePercent.toFixed(2)}}%)</span>
-                            <button class="btn btn-sm btn-success ms-2" @click="buyStock(s.code)">涔板叆</button>
-                            <button class="btn btn-sm btn-danger ms-1" @click="sellStock(s.code)">鍗栧嚭</button>
+                            <button class="btn btn-sm btn-success ms-2" @click="buyStock(s.code)">买入</button>
+                            <button class="btn btn-sm btn-danger ms-1" @click="sellStock(s.code)">卖出</button>
                         </div>
                     </div>
                 </div>
@@ -123,9 +123,9 @@
                             this.loadInventory();
                             this.loadWallet();
                         } else {
-                            this.loginError = '鐜╁涓嶅湪绾挎垨涓嶅瓨鍦?;
+                            this.loginError = '玩家不在线或不存在';
                         }
-                    } catch(e) { this.loginError = '鏈嶅姟鍣ㄨ繛鎺ュけ璐?; }
+                    } catch(e) { this.loginError = '服务器连接失败'; }
                     this.loading = false;
                 },
                 async loadInventory() {
@@ -142,12 +142,12 @@
                     this.loadMarket(); this.loadWallet(); this.loadInventory();
                 },
                 async sellItem(slot, price) {
-                    if (!price || price <= 0) { alert('浠锋牸蹇呴』澶т簬0'); return; }
+                    if (!price || price <= 0) { alert('价格必须大于0'); return; }
                     await axios.post('/api/market/sell', { playerUuid: this.user.uuid, slot: slot, price: parseInt(price) });
                     this.loadMarket(); this.loadInventory();
                 },
                 async bid(id) {
-                    const amount = prompt('杈撳叆鍑轰环閲戦');
+                    const amount = prompt('输入出价金额');
                     if (!amount) return;
                     await axios.post('/api/auction/bid', { playerUuid: this.user.uuid, auctionId: id, amount: parseInt(amount) });
                     this.loadAuction(); this.loadWallet();
