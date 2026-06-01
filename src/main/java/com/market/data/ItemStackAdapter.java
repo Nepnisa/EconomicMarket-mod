@@ -27,7 +27,7 @@ public class ItemStackAdapter implements JsonSerializer<ItemStack>, JsonDeserial
         byte[] nbtBytes = Base64.getDecoder().decode(base64);
         try {
             NbtElement element = StringNbtReader.parse(new String(nbtBytes));
-            NbtCompound nbt = (NbtCompound) element;  // 正确转换
+            NbtCompound nbt = (NbtCompound) element;
             return ItemStack.fromNbt(nbt);
         } catch (Exception e) {
             throw new JsonParseException(e);
