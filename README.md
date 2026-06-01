@@ -25,7 +25,7 @@ EconomicMarket 是一个纯服务端 Fabric 模组，为你的服务器提供一
 ## 📦 安装要求
 
 - **Minecraft 1.20.1**，需使用 **Fabric Loader** 0.14.22 或更高版本。
-- **[Fabric API](https://modrinth.com/mod/fabric-api)**，需使用**Fabeic API 0.88.1** 或更高版本（服务端或客户端 `mods` 文件夹必须包含）。
+- **[Fabric API](https://modrinth.com/mod/fabric-api)**，需使用**Fabric API 0.88.1** 或更高版本（服务端或客户端 `mods` 文件夹必须包含）。
 - 本模组**仅支持 1.20.1**，如需用于其他版本需自行修改源码。
 
 ---
