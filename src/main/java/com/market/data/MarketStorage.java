@@ -16,7 +16,6 @@ public class MarketStorage {
             .registerTypeAdapter(ItemStack.class, new ItemStackAdapter())
             .create();
 
-    // 其余 load/save 方法保持不变
     public static List<MarketItem> load() {
         if (!Files.exists(FILE)) return new ArrayList<>();
         try {
