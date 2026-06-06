@@ -8,7 +8,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -23,7 +25,15 @@ public class AuctionSellHandler implements HttpHandler {
             int slot = json.get("slot").getAsInt();
             int startPrice = json.get("startPrice").getAsInt();
             int minInc = json.get("minInc").getAsInt();
-            int durationMin = json.get("duration").getAsInt();
+            int durationMin = json.get("duration").getAsInt();             // 分钟
+            boolean enableSkyLantern = json.get("enableSkyLantern").getAsBoolean();
+            int timeIncrement = json.get("timeIncrement").getAsInt();       // 秒
+
+            // 限制
+            if (durationMin > 10) durationMin = 10;
+            if (durationMin < 1) durationMin = 1;
+            if (timeIncrement > 20) timeIncrement = 20;
+            if (timeIncrement < 0) timeIncrement = 0;
 
             MarketMod.server.execute(() -> {
                 ServerPlayerEntity player = MarketMod.server.getPlayerManager().getPlayer(playerUuid);
@@ -49,8 +59,36 @@ public class AuctionSellHandler implements HttpHandler {
                 a.minBidIncrement = minInc;
                 a.endTime = System.currentTimeMillis() + durationMin * 60000L;
                 a.currentBid = 0;
+                a.enableSkyLantern = enableSkyLantern;
+                a.timeIncrement = timeIncrement;
                 AuctionManager.auctions.add(a);
                 AuctionManager.save();
+
+                // 读取服务器真实IP
+                String ip = "localhost";
+                try {
+                    InetSocketAddress addr = (InetSocketAddress) MarketMod.server.getServerAddress();
+                    if (addr != null) {
+                        ip = addr.getAddress().getHostAddress();
+                        if (ip.equals("0.0.0.0")) {
+                            ip = java.net.InetAddress.getLocalHost().getHostAddress();
+                        }
+                    }
+                } catch (Exception e) {}
+
+                // 构建广播消息
+                String msg = String.format(
+                    "玩家“%s”发起了一场拍卖！物品：%s | 起拍价：%d 绿宝石 | 时长：%d 分钟 | 每次加价延时：%d 秒 | %s点天灯 | 参与地址：http://%s:5888",
+                    player.getName().getString(),
+                    toSell.getName().getString(),
+                    startPrice,
+                    durationMin,
+                    timeIncrement,
+                    enableSkyLantern ? "已开启" : "未开启",
+                    ip
+                );
+                MarketMod.server.getPlayerManager().broadcast(Text.literal(msg), false);
+
                 try { sendJson(exchange, "{\"success\":true}"); } catch (IOException ignored) {}
             });
         } catch (Exception e) {
