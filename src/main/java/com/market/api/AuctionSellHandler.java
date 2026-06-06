@@ -10,7 +10,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import java.io.*;
-import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -25,11 +25,11 @@ public class AuctionSellHandler implements HttpHandler {
             int slot = json.get("slot").getAsInt();
             int startPrice = json.get("startPrice").getAsInt();
             int minInc = json.get("minInc").getAsInt();
-            int durationMin = json.get("duration").getAsInt();             // 分钟
-            boolean enableSkyLantern = json.get("enableSkyLantern").getAsBoolean();
-            int timeIncrement = json.get("timeIncrement").getAsInt();       // 秒
+            int durationMin = json.get("duration").getAsInt();
+            boolean enableSkyLantern = json.has("enableSkyLantern") && json.get("enableSkyLantern").getAsBoolean();
+            int timeIncrement = json.has("timeIncrement") ? json.get("timeIncrement").getAsInt() : 0;
 
-            // 限制
+            // 限制参数范围
             if (durationMin > 10) durationMin = 10;
             if (durationMin < 1) durationMin = 1;
             if (timeIncrement > 20) timeIncrement = 20;
@@ -64,19 +64,13 @@ public class AuctionSellHandler implements HttpHandler {
                 AuctionManager.auctions.add(a);
                 AuctionManager.save();
 
-                // 读取服务器真实IP
+                // 获取本机IP
                 String ip = "localhost";
                 try {
-                    InetSocketAddress addr = (InetSocketAddress) MarketMod.server.getServerAddress();
-                    if (addr != null) {
-                        ip = addr.getAddress().getHostAddress();
-                        if (ip.equals("0.0.0.0")) {
-                            ip = java.net.InetAddress.getLocalHost().getHostAddress();
-                        }
-                    }
+                    ip = InetAddress.getLocalHost().getHostAddress();
                 } catch (Exception e) {}
 
-                // 构建广播消息
+                // 广播消息
                 String msg = String.format(
                     "玩家“%s”发起了一场拍卖！物品：%s | 起拍价：%d 绿宝石 | 时长：%d 分钟 | 每次加价延时：%d 秒 | %s点天灯 | 参与地址：http://%s:5888",
                     player.getName().getString(),
@@ -103,6 +97,7 @@ public class AuctionSellHandler implements HttpHandler {
         OutputStream os = exchange.getResponseBody();
         os.write(resp); os.close();
     }
+
     private void sendError(HttpExchange exchange, String msg) throws IOException {
         sendJson(exchange, "{\"error\":\"" + msg + "\"}");
     }
