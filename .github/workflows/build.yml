@@ -1,13 +1,30 @@
 name: Build Mod
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v3
-        with: { java-version: 17, distribution: 'temurin' }
-      - run: chmod +x ./gradlew
-      - run: ./gradlew build
-      - uses: actions/upload-artifact@v4
-        with: { name: economicmarket, path: build/libs/*.jar }
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Build with Gradle
+        run: |
+          ./gradlew build --stacktrace --info 2>&1 | tee build.log
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+      - name: Upload mod artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: economicmarket
+          path: build/libs/*.jar
