@@ -29,11 +29,14 @@ public class AuctionSellHandler implements HttpHandler {
             boolean enableSkyLantern = json.has("enableSkyLantern") && json.get("enableSkyLantern").getAsBoolean();
             int timeIncrement = json.has("timeIncrement") ? json.get("timeIncrement").getAsInt() : 0;
 
-            // 限制参数范围
+            // 限制参数范围，并保存为 final 变量供 lambda 使用
             if (durationMin > 10) durationMin = 10;
             if (durationMin < 1) durationMin = 1;
             if (timeIncrement > 20) timeIncrement = 20;
             if (timeIncrement < 0) timeIncrement = 0;
+
+            final int finalDuration = durationMin;
+            final int finalTimeIncrement = timeIncrement;
 
             MarketMod.server.execute(() -> {
                 ServerPlayerEntity player = MarketMod.server.getPlayerManager().getPlayer(playerUuid);
@@ -57,10 +60,10 @@ public class AuctionSellHandler implements HttpHandler {
                 a.item = toSell;
                 a.startingPrice = startPrice;
                 a.minBidIncrement = minInc;
-                a.endTime = System.currentTimeMillis() + durationMin * 60000L;
+                a.endTime = System.currentTimeMillis() + finalDuration * 60000L;
                 a.currentBid = 0;
                 a.enableSkyLantern = enableSkyLantern;
-                a.timeIncrement = timeIncrement;
+                a.timeIncrement = finalTimeIncrement;
                 AuctionManager.auctions.add(a);
                 AuctionManager.save();
 
@@ -76,8 +79,8 @@ public class AuctionSellHandler implements HttpHandler {
                     player.getName().getString(),
                     toSell.getName().getString(),
                     startPrice,
-                    durationMin,
-                    timeIncrement,
+                    finalDuration,
+                    finalTimeIncrement,
                     enableSkyLantern ? "已开启" : "未开启",
                     ip
                 );
