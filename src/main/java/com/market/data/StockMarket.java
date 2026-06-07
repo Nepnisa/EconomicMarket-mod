@@ -12,6 +12,7 @@ public class StockMarket {
     private static final Random random = new Random();
 
     static {
+        // A股（原30只）
         stocks.add(new StockItem("NEJT","NE交通",50));
         stocks.add(new StockItem("MSFT","微软方块",120));
         stocks.add(new StockItem("APLE","苹果公司",95));
@@ -42,6 +43,39 @@ public class StockMarket {
         stocks.add(new StockItem("RAIL","铁轨交通",33));
         stocks.add(new StockItem("BOAT","船舶运输",16));
         stocks.add(new StockItem("SLIM","粘液球科技",42));
+
+        // B股（新增30只）
+        stocks.add(new StockItem("XYGD","星云轨道",60));
+        stocks.add(new StockItem("BIQT","碧青轨道",55));
+        stocks.add(new StockItem("QYZG","穹渊重工",80));
+        stocks.add(new StockItem("BY01","深岩集团",45));
+        stocks.add(new StockItem("BY02","熔火能源",70));
+        stocks.add(new StockItem("BY03","虚空物流",65));
+        stocks.add(new StockItem("BY04","结晶科技",90));
+        stocks.add(new StockItem("BY05","龙息化工",50));
+        stocks.add(new StockItem("BY06","幻翼航空",75));
+        stocks.add(new StockItem("BY07","暗影机械",85));
+        stocks.add(new StockItem("BY08","闪耀传媒",40));
+        stocks.add(new StockItem("BY09","雷鸣电力",58));
+        stocks.add(new StockItem("BY10","极光通信",62));
+        stocks.add(new StockItem("BY11","苍穹农业",35));
+        stocks.add(new StockItem("BY12","不朽建材",48));
+        stocks.add(new StockItem("BY13","幻梦医药",72));
+        stocks.add(new StockItem("BY14","星火冶炼",55));
+        stocks.add(new StockItem("BY15","静水渔业",30));
+        stocks.add(new StockItem("BY16","破晓纺织",38));
+        stocks.add(new StockItem("BY17","永夜矿业",95));
+        stocks.add(new StockItem("BY18","潮汐食品",42));
+        stocks.add(new StockItem("BY19","微风酿造",68));
+        stocks.add(new StockItem("BY20","月光书局",52));
+        stocks.add(new StockItem("BY21","星辰照明",20));
+        stocks.add(new StockItem("BY22","天梯制造",15));
+        stocks.add(new StockItem("BY23","次元仓储",33));
+        stocks.add(new StockItem("BY24","深渊工业",78));
+        stocks.add(new StockItem("BY25","浮空交通",46));
+        stocks.add(new StockItem("BY26","远洋运输",39));
+        stocks.add(new StockItem("BY27","凝胶科技",66));
+
         load();
     }
 
