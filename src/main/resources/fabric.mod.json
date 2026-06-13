@@ -3,14 +3,15 @@
   "id": "economicmarket",
   "version": "${version}",
   "name": "EconomicMarket",
-  "description": "Browser-based economy mod using real inventory emeralds",
+  "description": "In-game economy GUI + browser support",
   "icon": "assets/economicmarket/icon.png",
   "entrypoints": {
-    "main": ["com.market.MarketMod"]
+    "main": ["com.market.MarketMod"],
+    "client": ["com.market.client.MarketBrowserClient"]
   },
   "depends": {
     "fabricloader": ">=0.14.22",
     "fabric-api": ">=0.88.1",
     "minecraft": "1.20.1"
-}
+  }
 }
