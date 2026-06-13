@@ -15,242 +15,288 @@
     </style>
 </head>
 <body>
-<div id="app" class="container py-4">
-    <!-- 登录界面 -->
-    <div v-if="!user.loggedIn" class="card mx-auto" style="max-width:400px;margin-top:100px;">
-        <h4 class="mb-3">Minecraft 一键登录</h4>
-        <div class="mb-3"><input v-model="loginName" class="form-control" placeholder="输入您的 Minecraft 用户名" @keyup.enter="login"/></div>
-        <button class="btn btn-success w-100" @click="login" :disabled="loading">{{ loading ? '验证中...' : '登录' }}</button>
-        <div class="text-danger mt-2" v-if="loginError">{{ loginError }}</div>
-    </div>
-
-    <!-- 主面板 -->
-    <div v-else>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>EconomicMarket</h2>
-            <span class="fw-bold text-warning">欢迎, {{ user.name }} | {{ balance }} 绿宝石</span>
-        </div>
-        <ul class="nav nav-pills mb-4">
-            <li class="nav-item"><a class="nav-link" :class="{active:tab==='market'}" @click="tab='market'; loadMarket(); loadInventory()" href="#">市场</a></li>
-            <li class="nav-item"><a class="nav-link" :class="{active:tab==='auction'}" @click="tab='auction'; loadAuction()" href="#">拍卖</a></li>
-            <li class="nav-item"><a class="nav-link" :class="{active:tab==='stocks'}" @click="tab='stocks'; loadStocks()" href="#">股票</a></li>
-            <li class="nav-item"><a class="nav-link" :class="{active:tab==='leaderboard'}" @click="tab='leaderboard'; loadLeaderboard()" href="#">排行榜</a></li>
-        </ul>
-
-        <!-- 市场 -->
-        <div v-if="tab==='market'">
-            <div class="card mb-3">
-                <h5>上架物品</h5>
-                <div v-if="inventory.length === 0" class="text-muted">背包中没有可上架的物品</div>
-                <div v-for="item in inventory" :key="item.slot" class="d-flex align-items-center mb-2">
-                    <span class="me-3">{{ item.name }} x{{ item.count }}</span>
-                    <input v-model="item.sellPrice" class="form-control form-control-sm me-2" style="width:100px;" placeholder="价格" type="number" min="1"/>
-                    <button class="btn btn-sm btn-sell" @click="sellItem(item.slot, item.sellPrice)">上架</button>
-                </div>
-            </div>
-            <div class="card" v-for="item in marketItems" :key="item.id">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>{{item.name}} <small class="text-muted ms-2">卖家: {{item.seller}}</small></div>
-                    <div>
-                        <span class="text-success me-2">{{item.price}} E</span>
-                        <button class="btn btn-sm btn-success" @click="buyItem(item.id)">购买</button>
-                    </div>
-                </div>
-            </div>
+    <div id="app" class="container py-4">
+        <!-- 登录界面 -->
+        <div v-if="!user.loggedIn" class="card mx-auto" style="max-width:400px;margin-top:100px;">
+            <h4 class="mb-3">Minecraft 一键登录</h4>
+            <div class="mb-3"><input v-model="loginName" class="form-control" placeholder="输入您的 Minecraft 用户名" @keyup.enter="login"/></div>
+            <button class="btn btn-success w-100" @click="login" :disabled="loading">{{ loading ? '验证中...' : '登录' }}</button>
+            <div class="text-danger mt-2" v-if="loginError">{{ loginError }}</div>
         </div>
 
-        <!-- 拍卖 -->
-        <div v-if="tab==='auction'">
-            <div v-if="!selectedAuction">
-                <!-- 创建拍卖表单 -->
-                <div class="card mb-3">
-                    <h5>上架拍卖</h5>
-                    <div class="row">
-                        <div class="col-md-2 mb-2"><input v-model="aucSlot" class="form-control" placeholder="背包槽位" type="number" min="0" max="35"/></div>
-                        <div class="col-md-2 mb-2"><input v-model="aucStartPrice" class="form-control" placeholder="起拍价" type="number" min="1"/></div>
-                        <div class="col-md-2 mb-2"><input v-model="aucMinInc" class="form-control" placeholder="最小加价" type="number" min="1"/></div>
-                        <div class="col-md-2 mb-2"><input v-model="aucDuration" class="form-control" placeholder="时长(分钟,≤10)" type="number" min="1" max="10"/></div>
-                        <div class="col-md-2 mb-2"><input v-model="aucTimeInc" class="form-control" placeholder="加价延时(秒,≤20)" type="number" min="0" max="20"/></div>
-                    </div>
-                    <div class="form-check form-switch mt-2">
-                        <input class="form-check-input" type="checkbox" v-model="aucSkyLantern" id="skyLanternSwitch">
-                        <label class="form-check-label" for="skyLanternSwitch">开启点天灯</label>
-                        <small class="text-muted ms-2">开启后，系统将自动替点天灯玩家在每次被超价时加价，直至获胜或绿宝石不足。</small>
-                    </div>
-                    <button class="btn btn-sell mt-2" @click="sellAuction">上架拍卖</button>
-                </div>
-
-                <!-- 拍卖列表 -->
-                <div class="card" v-for="a in auctions" :key="a.id" @click="selectedAuction = a.id" style="cursor:pointer;">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>{{ a.name }}</strong> <small v-if="a.finished" class="text-muted">(已结束)</small>
-                            <span v-if="a.enableSkyLantern" class="lantern ms-2">点天灯</span>
-                            <div class="text-muted">卖家：{{ a.seller }} | 起拍：{{ a.startingPrice }} E</div>
-                        </div>
-                        <div>
-                            <div>当前：{{ a.currentBid || '暂无' }} E</div>
-                            <div v-if="!a.finished">剩余 {{ a.remain }} 秒</div>
-                            <div v-else class="text-success">得主：{{ a.winner || '无人出价' }}</div>
-                        </div>
-                    </div>
-                </div>
+        <!-- 主面板 -->
+        <div v-else>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>EconomicMarket</h2>
+                <span class="fw-bold text-warning">欢迎, {{ user.name }} | {{ balance }} 绿宝石</span>
             </div>
-
-            <!-- 拍卖详情 -->
-            <div v-else>
-                <button class="btn btn-secondary mb-3" @click="selectedAuction = null">← 返回列表</button>
-                <div class="card" v-if="auctionDetail">
-                    <h4>{{ auctionDetail.name }}</h4>
-                    <p><strong>卖家：</strong>{{ auctionDetail.seller }}</p>
-                    <p><strong>起拍价：</strong>{{ auctionDetail.startingPrice }} E</p>
-                    <p><strong>最小加价：</strong>{{ auctionDetail.minBidIncrement }} E</p>
-                    <p v-if="!auctionDetail.finished"><strong>剩余时间：</strong>{{ auctionDetail.remain }} 秒</p>
-                    <p v-else><strong>状态：</strong>已结束</p>
-                    <p><strong>当前出价：</strong>{{ auctionDetail.currentBid || '暂无' }} E</p>
-                    <p><strong>最高出价者：</strong>{{ auctionDetail.currentBidderName || '无' }}</p>
-                    <p v-if="auctionDetail.enableSkyLantern"><span class="lantern">点天灯模式已开启</span></p>
-                    <p v-if="auctionDetail.finished && auctionDetail.winner"><strong>最终得主：</strong>{{ auctionDetail.winner }}</p>
-
-                    <!-- 出价记录 -->
-                    <h6 class="mt-3">出价记录</h6>
-                    <div class="bid-history">
-                        <div v-for="(bid, index) in auctionDetail.bidHistory" :key="index" class="d-flex justify-content-between py-1 border-bottom border-secondary">
-                            <span>{{ bid.player }}</span>
-                            <span class="text-success">{{ bid.amount }} E</span>
-                            <small class="text-muted">{{ new Date(bid.time).toLocaleTimeString() }}</small>
-                        </div>
-                        <div v-if="!auctionDetail.bidHistory || auctionDetail.bidHistory.length === 0">暂无出价</div>
-                    </div>
-
-                    <!-- 出价按钮 -->
-                    <div v-if="!auctionDetail.finished" class="mt-3">
-                        <input v-model="bidAmount" class="form-control mb-2" placeholder="输入出价金额" type="number"/>
-                        <button class="btn btn-warning" @click="placeBid">出价</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 股票 -->
-        <div v-if="tab==='stocks'">
-            <div class="card" v-for="s in stocks" :key="s.code">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div><strong>{{s.name}}</strong> <small class="text-muted">({{s.code}})</small></div>
-                    <div>
-                        <span :class="s.change>=0?'price-up':'price-down'">{{s.price}} E ({{s.changePercent.toFixed(2)}}%)</span>
-                        <button class="btn btn-sm btn-success ms-2" @click="buyStock(s.code)">买入</button>
-                        <button class="btn btn-sm btn-danger ms-1" @click="sellStock(s.code)">卖出</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 排行榜 -->
-        <div v-if="tab==='leaderboard'">
-            <ul class="list-group">
-                <li class="list-group-item d-flex justify-content-between" v-for="(e,i) in leaderboard" :key="i">
-                    <span>{{i+1}}. {{e.name}}</span>
-                    <span>{{e.balance}} E</span>
-                </li>
+            <ul class="nav nav-pills mb-4">
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='market'}" @click="tab='market'; loadMarket(); loadInventory()" href="#">市场</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='auction'}" @click="tab='auction'; loadAuction()" href="#">拍卖</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='stocks'}" @click="tab='stocks'; loadStocks()" href="#">股票</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='wallet'}" @click="tab='wallet'; loadWallet()" href="#">钱包</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='bank'}" @click="tab='bank'; loadBank()" href="#">银行</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active:tab==='leaderboard'}" @click="tab='leaderboard'; loadLeaderboard()" href="#">排行榜</a></li>
             </ul>
+
+            <!-- 市场 -->
+            <div v-if="tab==='market'">
+                <div class="card mb-3">
+                    <h5>上架物品</h5>
+                    <div v-if="inventory.length === 0" class="text-muted">背包中没有可上架的物品</div>
+                    <div v-for="item in inventory" :key="item.slot" class="d-flex align-items-center mb-2">
+                        <span class="me-3">{{ item.name }} x{{ item.count }}</span>
+                        <input v-model="item.sellPrice" class="form-control form-control-sm me-2" style="width:100px;" placeholder="价格" type="number" min="1"/>
+                        <button class="btn btn-sm btn-sell" @click="sellItem(item.slot, item.sellPrice)">上架</button>
+                    </div>
+                </div>
+                <div class="card" v-for="item in marketItems" :key="item.id">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>{{item.name}} <small class="text-muted ms-2">卖家: {{item.seller}}</small></div>
+                        <div>
+                            <span class="text-success me-2">{{item.price}} E</span>
+                            <button class="btn btn-sm btn-success" @click="buyItem(item.id)">购买</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 拍卖 -->
+            <div v-if="tab==='auction'">
+                <div v-if="!selectedAuction">
+                    <div class="card mb-3">
+                        <h5>上架拍卖</h5>
+                        <div class="row">
+                            <div class="col-md-2 mb-2"><input v-model="aucSlot" class="form-control" placeholder="背包槽位" type="number" min="0" max="35"/></div>
+                            <div class="col-md-2 mb-2"><input v-model="aucStartPrice" class="form-control" placeholder="起拍价" type="number" min="1"/></div>
+                            <div class="col-md-2 mb-2"><input v-model="aucMinInc" class="form-control" placeholder="最小加价" type="number" min="1"/></div>
+                            <div class="col-md-2 mb-2"><input v-model="aucDuration" class="form-control" placeholder="时长(分钟,≤10)" type="number" min="1" max="10"/></div>
+                            <div class="col-md-2 mb-2"><input v-model="aucTimeInc" class="form-control" placeholder="加价延时(秒,≤20)" type="number" min="0" max="20"/></div>
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" v-model="aucSkyLantern" id="skyLanternSwitch">
+                            <label class="form-check-label" for="skyLanternSwitch">开启点天灯</label>
+                            <small class="text-muted ms-2">开启后，系统将自动替点天灯玩家在每次被超价时加价，直至获胜或绿宝石不足。</small>
+                        </div>
+                        <button class="btn btn-sell mt-2" @click="sellAuction">上架拍卖</button>
+                    </div>
+                    <div class="card" v-for="a in auctions" :key="a.id" @click="selectedAuction = a.id" style="cursor:pointer;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ a.name }}</strong> <small v-if="a.finished" class="text-muted">(已结束)</small>
+                                <span v-if="a.enableSkyLantern" class="lantern ms-2">点天灯</span>
+                                <div class="text-muted">卖家：{{ a.seller }} | 起拍：{{ a.startingPrice }} E</div>
+                            </div>
+                            <div>
+                                <div>当前：{{ a.currentBid || '暂无' }} E</div>
+                                <div v-if="!a.finished">剩余 {{ a.remain }} 秒</div>
+                                <div v-else class="text-success">得主：{{ a.winner || '无人出价' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else>
+                    <button class="btn btn-secondary mb-3" @click="selectedAuction = null">← 返回列表</button>
+                    <div class="card" v-if="auctionDetail">
+                        <h4>{{ auctionDetail.name }}</h4>
+                        <p><strong>卖家：</strong>{{ auctionDetail.seller }}</p>
+                        <p><strong>起拍价：</strong>{{ auctionDetail.startingPrice }} E</p>
+                        <p><strong>最小加价：</strong>{{ auctionDetail.minBidIncrement }} E</p>
+                        <p v-if="!auctionDetail.finished"><strong>剩余时间：</strong>{{ auctionDetail.remain }} 秒</p>
+                        <p v-else><strong>状态：</strong>已结束</p>
+                        <p><strong>当前出价：</strong>{{ auctionDetail.currentBid || '暂无' }} E</p>
+                        <p><strong>最高出价者：</strong>{{ auctionDetail.currentBidderName || '无' }}</p>
+                        <p v-if="auctionDetail.enableSkyLantern"><span class="lantern">点天灯模式已开启</span></p>
+                        <p v-if="auctionDetail.finished && auctionDetail.winner"><strong>最终得主：</strong>{{ auctionDetail.winner }}</p>
+                        <h6 class="mt-3">出价记录</h6>
+                        <div class="bid-history">
+                            <div v-for="(bid, index) in auctionDetail.bidHistory" :key="index" class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                                <span>{{ bid.player }}</span>
+                                <span class="text-success">{{ bid.amount }} E</span>
+                                <small class="text-muted">{{ new Date(bid.time).toLocaleTimeString() }}</small>
+                            </div>
+                            <div v-if="!auctionDetail.bidHistory || auctionDetail.bidHistory.length === 0">暂无出价</div>
+                        </div>
+                        <div v-if="!auctionDetail.finished" class="mt-3">
+                            <input v-model="bidAmount" class="form-control mb-2" placeholder="输入出价金额" type="number"/>
+                            <button class="btn btn-warning" @click="placeBid">出价</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 股票 -->
+            <div v-if="tab==='stocks'">
+                <div class="card" v-for="s in stocks" :key="s.code">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><strong>{{s.name}}</strong> <small class="text-muted">({{s.code}})</small></div>
+                        <div>
+                            <span :class="s.change>=0?'price-up':'price-down'">{{s.price}} E ({{s.changePercent.toFixed(2)}}%)</span>
+                            <button class="btn btn-sm btn-success ms-2" @click="buyStock(s.code)">买入</button>
+                            <button class="btn btn-sm btn-danger ms-1" @click="sellStock(s.code)">卖出</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 钱包 -->
+            <div v-if="tab==='wallet'">
+                <h3>余额: {{balance}} E</h3>
+                <p class="text-muted">在线每分钟自动获得 +1 绿宝石</p>
+            </div>
+
+            <!-- 银行 -->
+            <div v-if="tab==='bank'">
+                <h3>银行余额: {{ bankBalance }} 绿宝石</h3>
+                <p class="text-muted">利率: 每分钟 1%（在线时自动结算）</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <input v-model="bankAmount" class="form-control" placeholder="金额" type="number" min="1"/>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-success" @click="bankDeposit">存款</button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-warning" @click="bankWithdraw">取款</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 排行榜 -->
+            <div v-if="tab==='leaderboard'">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between" v-for="(e,i) in leaderboard" :key="i">
+                        <span>{{i+1}}. {{e.name}}</span>
+                        <span>{{e.balance}} E</span>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-const { createApp } = Vue;
-createApp({
-    data() {
-        return {
-            loginName:'', loading:false, loginError:'',
-            user:{loggedIn:false,uuid:'',name:''},
-            tab:'market',
-            marketItems:[], auctions:[], stocks:[], balance:0, leaderboard:[], inventory:[],
-            // 拍卖创建字段
-            aucSlot:0, aucStartPrice:1, aucMinInc:1, aucDuration:5, aucTimeInc:0, aucSkyLantern:false,
-            // 拍卖详情
-            selectedAuction: null,
-            bidAmount: 0
-        };
-    },
-    computed: {
-        auctionDetail() {
-            return this.auctions.find(a => a.id === this.selectedAuction) || null;
-        }
-    },
-    methods: {
-        async login() {
-            if(!this.loginName) return; this.loading=true; this.loginError='';
-            try {
-                const res = await axios.get('/api/auth?name='+this.loginName);
-                if(res.data.online){
-                    this.user={loggedIn:true,uuid:res.data.uuid,name:res.data.name};
-                    this.loadMarket(); this.loadInventory(); this.loadWallet();
-                } else this.loginError='玩家不在线或不存在';
-            } catch(e) { this.loginError='服务器连接失败'; }
-            this.loading=false;
-        },
-        async loadMarket() { this.marketItems = (await axios.get('/api/market/list')).data; },
-        async loadAuction() { this.auctions = (await axios.get('/api/auction/list')).data; },
-        async loadStocks() { this.stocks = (await axios.get('/api/stock/list')).data; },
-        async loadWallet() { const r = await axios.get('/api/wallet/balance?uuid='+this.user.uuid); this.balance = r.data.balance; },
-        async loadLeaderboard() { this.leaderboard = (await axios.get('/api/leaderboard')).data; },
-        async loadInventory() { const r = await axios.get('/api/player/inventory?uuid='+this.user.uuid); this.inventory = r.data.map(i=>({...i, sellPrice:1})); },
-        async buyItem(id) {
-            await axios.post('/api/market/buy', { playerUuid: this.user.uuid, itemId: id });
-            this.loadMarket(); this.loadWallet(); this.loadInventory();
-        },
-        async sellItem(slot, price) {
-            if(!price || price<=0){ alert('价格必须大于0'); return; }
-            await axios.post('/api/market/sell', { playerUuid: this.user.uuid, slot: slot, price: parseInt(price) });
-            this.loadMarket(); this.loadInventory();
-        },
-        async sellAuction() {
-            if(this.aucSlot<0||this.aucSlot>35){alert('槽位错误');return;}
-            if(this.aucStartPrice<=0||this.aucMinInc<=0||this.aucDuration<=0){alert('价格和时长必须大于0');return;}
-            if(this.aucDuration>10){alert('时长不能超过10分钟');return;}
-            if(this.aucTimeInc>20){alert('加价延时不能超过20秒');return;}
-            await axios.post('/api/auction/sell', {
-                playerUuid: this.user.uuid,
-                slot: parseInt(this.aucSlot),
-                startPrice: parseInt(this.aucStartPrice),
-                minInc: parseInt(this.aucMinInc),
-                duration: parseInt(this.aucDuration),
-                timeIncrement: parseInt(this.aucTimeInc),
-                enableSkyLantern: this.aucSkyLantern
-            });
-            this.loadAuction();
-            this.loadInventory();
-        },
-        async placeBid() {
-            if(!this.bidAmount || this.bidAmount<=0){alert('出价金额必须大于0');return;}
-            await axios.post('/api/auction/bid', {
-                playerUuid: this.user.uuid,
-                auctionId: this.selectedAuction,
-                amount: parseInt(this.bidAmount)
-            });
-            this.loadAuction();
-            this.loadWallet();
-            this.bidAmount = 0;
-        },
-        async buyStock(code) {
-            await axios.post('/api/stock/buy', { playerUuid: this.user.uuid, code, qty: 1 });
-            this.loadStocks(); this.loadWallet();
-        },
-        async sellStock(code) {
-            await axios.post('/api/stock/sell', { playerUuid: this.user.uuid, code, qty: 1 });
-            this.loadStocks(); this.loadWallet();
-        }
-    },
-    mounted() {
-        this.loadMarket();
-        this.loadWallet();
-        this.loadAuction();
-    }
-}).mount('#app');
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    loginName: '', loading: false, loginError: '',
+                    user: { loggedIn: false, uuid: '', name: '' },
+                    tab: 'market',
+                    marketItems: [], auctions: [], stocks: [], balance: 0, leaderboard: [],
+                    inventory: [],
+                    // 拍卖创建
+                    aucSlot: 0, aucStartPrice: 1, aucMinInc: 1, aucDuration: 5, aucTimeInc: 0, aucSkyLantern: false,
+                    selectedAuction: null,
+                    bidAmount: 0,
+                    // 银行
+                    bankBalance: 0,
+                    bankAmount: 0
+                };
+            },
+            computed: {
+                auctionDetail() {
+                    return this.auctions.find(a => a.id === this.selectedAuction) || null;
+                }
+            },
+            methods: {
+                async login() {
+                    if (!this.loginName) return;
+                    this.loading = true;
+                    try {
+                        const res = await axios.get('/api/auth?name=' + this.loginName);
+                        if (res.data.online) {
+                            this.user = { loggedIn: true, uuid: res.data.uuid, name: res.data.name };
+                            this.loadMarket();
+                            this.loadInventory();
+                            this.loadWallet();
+                            this.loadBank();
+                        } else {
+                            this.loginError = '玩家不在线或不存在';
+                        }
+                    } catch(e) { this.loginError = '服务器连接失败'; }
+                    this.loading = false;
+                },
+                async loadMarket() { this.marketItems = (await axios.get('/api/market/list')).data; },
+                async loadAuction() { this.auctions = (await axios.get('/api/auction/list')).data; },
+                async loadStocks() { this.stocks = (await axios.get('/api/stock/list')).data; },
+                async loadWallet() { const r = await axios.get('/api/wallet/balance?uuid='+this.user.uuid); this.balance = r.data.balance; },
+                async loadLeaderboard() { this.leaderboard = (await axios.get('/api/leaderboard')).data; },
+                async loadInventory() {
+                    const r = await axios.get('/api/player/inventory?uuid=' + this.user.uuid);
+                    this.inventory = r.data.map(i => ({ ...i, sellPrice: 1 }));
+                },
+                async loadBank() {
+                    const r = await axios.get('/api/bank/balance?uuid=' + this.user.uuid);
+                    this.bankBalance = r.data.balance;
+                },
+                async buyItem(id) {
+                    await axios.post('/api/market/buy', { playerUuid: this.user.uuid, itemId: id });
+                    this.loadMarket(); this.loadWallet(); this.loadInventory();
+                },
+                async sellItem(slot, price) {
+                    if(!price || price<=0){ alert('价格必须大于0'); return; }
+                    await axios.post('/api/market/sell', { playerUuid: this.user.uuid, slot: slot, price: parseInt(price) });
+                    this.loadMarket(); this.loadInventory();
+                },
+                async sellAuction() {
+                    if(this.aucSlot<0||this.aucSlot>35){alert('槽位错误');return;}
+                    if(this.aucStartPrice<=0||this.aucMinInc<=0||this.aucDuration<=0){alert('价格和时长必须大于0');return;}
+                    if(this.aucDuration>10){alert('时长不能超过10分钟');return;}
+                    if(this.aucTimeInc>20){alert('加价延时不能超过20秒');return;}
+                    await axios.post('/api/auction/sell', {
+                        playerUuid: this.user.uuid,
+                        slot: parseInt(this.aucSlot),
+                        startPrice: parseInt(this.aucStartPrice),
+                        minInc: parseInt(this.aucMinInc),
+                        duration: parseInt(this.aucDuration),
+                        timeIncrement: parseInt(this.aucTimeInc),
+                        enableSkyLantern: this.aucSkyLantern
+                    });
+                    this.loadAuction();
+                    this.loadInventory();
+                },
+                async placeBid() {
+                    if(!this.bidAmount || this.bidAmount<=0){alert('出价金额必须大于0');return;}
+                    await axios.post('/api/auction/bid', {
+                        playerUuid: this.user.uuid,
+                        auctionId: this.selectedAuction,
+                        amount: parseInt(this.bidAmount)
+                    });
+                    this.loadAuction();
+                    this.loadWallet();
+                    this.bidAmount = 0;
+                },
+                async buyStock(code) {
+                    await axios.post('/api/stock/buy', { playerUuid: this.user.uuid, code, qty: 1 });
+                    this.loadStocks(); this.loadWallet();
+                },
+                async sellStock(code) {
+                    await axios.post('/api/stock/sell', { playerUuid: this.user.uuid, code, qty: 1 });
+                    this.loadStocks(); this.loadWallet();
+                },
+                async bankDeposit() {
+                    const amt = parseInt(this.bankAmount);
+                    if (!amt || amt <= 0) { alert('请输入有效金额'); return; }
+                    await axios.post('/api/bank/deposit', { playerUuid: this.user.uuid, amount: amt });
+                    this.loadBank();
+                    this.loadWallet();
+                    this.bankAmount = 0;
+                },
+                async bankWithdraw() {
+                    const amt = parseInt(this.bankAmount);
+                    if (!amt || amt <= 0) { alert('请输入有效金额'); return; }
+                    await axios.post('/api/bank/withdraw', { playerUuid: this.user.uuid, amount: amt });
+                    this.loadBank();
+                    this.loadWallet();
+                    this.bankAmount = 0;
+                }
+            },
+            mounted() {
+                // 预加载
+            }
+        }).mount('#app');
+    </script>
 </body>
 </html>
