@@ -38,11 +38,11 @@ public class MarketMod implements ModInitializer {
                         int newPort = IntegerArgumentType.getInteger(context, "port");
                         if (restartHttpServer(newPort)) {
                             context.getSource().sendFeedback(
-                                () -> Text.literal("Market port changed to " + newPort), true);
+                                () -> Text.literal("市场网页端口已更改为 " + newPort), true);
                             return 1;
                         } else {
                             context.getSource().sendError(
-                                Text.literal("Failed to bind port " + newPort + ". Is it already in use?"));
+                                Text.literal("端口 " + newPort + " 绑定失败，可能已被占用"));
                             return 0;
                         }
                     }))
@@ -52,7 +52,7 @@ public class MarketMod implements ModInitializer {
                         ServerPlayerEntity player = ctx.getSource().getPlayer();
                         if (player != null) {
                             int balance = CurrencyUtils.getEmeraldCount(player);
-                            player.sendMessage(Text.literal("Backpack emeralds: " + balance), false);
+                            player.sendMessage(Text.literal("背包绿宝石: " + balance), false);
                             return 1;
                         }
                         return 0;
@@ -64,13 +64,13 @@ public class MarketMod implements ModInitializer {
                         int amount = IntegerArgumentType.getInteger(ctx, "amount");
                         if (player != null) {
                             if (!CurrencyUtils.deductEmeralds(player, amount)) {
-                                player.sendMessage(Text.literal("Not enough emeralds"), false);
+                                player.sendMessage(Text.literal("背包绿宝石不足"), false);
                                 return 0;
                             }
                             BankAccount acc = BankStorage.getAccount(player.getUuid());
                             acc.balance += amount;
                             BankStorage.updateAccount(player.getUuid(), acc);
-                            player.sendMessage(Text.literal("Deposited " + amount + " emeralds"), false);
+                            player.sendMessage(Text.literal("已存入 " + amount + " 绿宝石到银行"), false);
                             return 1;
                         }
                         return 0;
@@ -83,13 +83,13 @@ public class MarketMod implements ModInitializer {
                         if (player != null) {
                             BankAccount acc = BankStorage.getAccount(player.getUuid());
                             if (acc.balance < amount) {
-                                player.sendMessage(Text.literal("Bank balance insufficient"), false);
+                                player.sendMessage(Text.literal("银行余额不足"), false);
                                 return 0;
                             }
                             acc.balance -= amount;
                             BankStorage.updateAccount(player.getUuid(), acc);
                             CurrencyUtils.giveEmeralds(player, amount);
-                            player.sendMessage(Text.literal("Withdrew " + amount + " emeralds"), false);
+                            player.sendMessage(Text.literal("已取出 " + amount + " 绿宝石"), false);
                             return 1;
                         }
                         return 0;
@@ -99,7 +99,7 @@ public class MarketMod implements ModInitializer {
                         ServerPlayerEntity player = ctx.getSource().getPlayer();
                         if (player != null) {
                             BankAccount acc = BankStorage.getAccount(player.getUuid());
-                            player.sendMessage(Text.literal("Bank balance: " + acc.balance + " emeralds"), false);
+                            player.sendMessage(Text.literal("银行余额: " + acc.balance + " 绿宝石"), false);
                             return 1;
                         }
                         return 0;
@@ -107,14 +107,14 @@ public class MarketMod implements ModInitializer {
                 .then(CommandManager.literal("help")
                     .executes(ctx -> {
                         ctx.getSource().sendFeedback(() -> Text.literal(
-                            "=== EconomicMarket Commands ===\n" +
-                            "/EMet port <port> - Change web panel port\n" +
-                            "/EMet emerald - Check backpack emeralds\n" +
-                            "/EMet bankin <amount> - Deposit emeralds\n" +
-                            "/EMet bankout <amount> - Withdraw emeralds\n" +
-                            "/EMet bankmoney - Check bank balance\n" +
-                            "/EMet browser - Open in-game GUI\n" +
-                            "/EMet help - Show this help"
+                            "===== EconomicMarket 命令帮助 =====\n" +
+                            "/EMet port <端口> - 更改市场网页端口\n" +
+                            "/EMet emerald - 查看背包绿宝石数量\n" +
+                            "/EMet bankin <金额> - 将绿宝石存入银行\n" +
+                            "/EMet bankout <金额> - 从银行取出绿宝石\n" +
+                            "/EMet bankmoney - 查询银行余额\n" +
+                            "/EMet browser - 在游戏内打开市场面板\n" +
+                            "/EMet help - 显示此帮助"
                         ), false);
                         return 1;
                     }))
@@ -126,8 +126,8 @@ public class MarketMod implements ModInitializer {
             String ip = "localhost";
             try { ip = java.net.InetAddress.getLocalHost().getHostAddress(); } catch (Exception ignored) {}
             player.sendMessage(Text.literal(
-                "Welcome! Market at http://" + ip + ":" + currentPort +
-                " or /EMet browser. /EMet help for commands."), false);
+                "欢迎！市场面板已开启，访问 http://" + ip + ":" + currentPort +
+                " 或输入 /EMet browser 在游戏内打开。"), false);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(this::tick);
@@ -158,6 +158,8 @@ public class MarketMod implements ModInitializer {
             httpServer.createContext("/api/bank/balance", new BankBalanceHandler());
             httpServer.createContext("/api/bank/deposit", new BankDepositHandler());
             httpServer.createContext("/api/bank/withdraw", new BankWithdrawHandler());
+            // 新增：查询玩家持股列表
+            httpServer.createContext("/api/stock/holdings", new StockHoldingsHandler());
             httpServer.start();
             currentPort = port;
         } catch (IOException e) {
