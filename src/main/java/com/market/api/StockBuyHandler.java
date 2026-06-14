@@ -6,7 +6,11 @@ import com.market.MarketMod;
 import com.market.data.*;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -37,6 +41,7 @@ public class StockBuyHandler implements HttpHandler {
                     return;
                 }
 
+                // 更新持仓
                 Map<UUID, Map<String, PlayerStocks.Holding>> all = PlayerStocks.loadAll();
                 Map<String, PlayerStocks.Holding> holdings = all.computeIfAbsent(uuid, k -> new HashMap<>());
                 PlayerStocks.Holding old = holdings.getOrDefault(code, new PlayerStocks.Holding(0,0));
@@ -44,6 +49,19 @@ public class StockBuyHandler implements HttpHandler {
                 int avg = (old.qty * old.avg + cost) / total;
                 holdings.put(code, new PlayerStocks.Holding(total, avg));
                 PlayerStocks.saveAll(all);
+
+                // 给予附魔纸凭证
+                ItemStack certificate = new ItemStack(Items.PAPER);
+                certificate.setCustomName(Text.literal(stock.name));
+                NbtCompound tag = certificate.getOrCreateNbt();
+                tag.putInt("Unbreakable", 1); // 耐久附魔效果
+                tag.putBoolean("Unbreakable", true);
+                certificate.addEnchantment(net.minecraft.enchantment.Enchantments.UNBREAKING, 1);
+                certificate.setCount(qty);
+                if (!player.getInventory().insertStack(certificate)) {
+                    player.dropItem(certificate, false);
+                }
+
                 try { sendJson(exchange, "{\"success\":true}"); } catch (IOException ignored) {}
             });
         } catch (Exception e) {
