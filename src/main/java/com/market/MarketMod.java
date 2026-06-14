@@ -32,7 +32,6 @@ public class MarketMod implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(CommandManager.literal("EMet")
-                // /EMet port <端口>
                 .then(CommandManager.literal("port")
                     .then(CommandManager.argument("port", IntegerArgumentType.integer(1, 65535))
                     .executes(context -> {
@@ -48,18 +47,16 @@ public class MarketMod implements ModInitializer {
                         }
                     }))
                 )
-                // /EMet emerald
                 .then(CommandManager.literal("emerald")
                     .executes(ctx -> {
                         ServerPlayerEntity player = ctx.getSource().getPlayer();
                         if (player != null) {
                             int balance = CurrencyUtils.getEmeraldCount(player);
-                            player.sendMessage(Text.literal("背包绿宝石: " + balance), false);
+                            player.sendMessage(Text.literal("Backpack emeralds: " + balance), false);
                             return 1;
                         }
                         return 0;
                     }))
-                // /EMet bankin <金额>
                 .then(CommandManager.literal("bankin")
                     .then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
                     .executes(ctx -> {
@@ -67,18 +64,17 @@ public class MarketMod implements ModInitializer {
                         int amount = IntegerArgumentType.getInteger(ctx, "amount");
                         if (player != null) {
                             if (!CurrencyUtils.deductEmeralds(player, amount)) {
-                                player.sendMessage(Text.literal("背包绿宝石不足"), false);
+                                player.sendMessage(Text.literal("Not enough emeralds"), false);
                                 return 0;
                             }
                             BankAccount acc = BankStorage.getAccount(player.getUuid());
                             acc.balance += amount;
                             BankStorage.updateAccount(player.getUuid(), acc);
-                            player.sendMessage(Text.literal("已存入 " + amount + " 绿宝石到银行"), false);
+                            player.sendMessage(Text.literal("Deposited " + amount + " emeralds"), false);
                             return 1;
                         }
                         return 0;
                     })))
-                // /EMet bankout <金额>
                 .then(CommandManager.literal("bankout")
                     .then(CommandManager.argument("amount", IntegerArgumentType.integer(1))
                     .executes(ctx -> {
@@ -87,39 +83,51 @@ public class MarketMod implements ModInitializer {
                         if (player != null) {
                             BankAccount acc = BankStorage.getAccount(player.getUuid());
                             if (acc.balance < amount) {
-                                player.sendMessage(Text.literal("银行余额不足"), false);
+                                player.sendMessage(Text.literal("Bank balance insufficient"), false);
                                 return 0;
                             }
                             acc.balance -= amount;
                             BankStorage.updateAccount(player.getUuid(), acc);
                             CurrencyUtils.giveEmeralds(player, amount);
-                            player.sendMessage(Text.literal("已取出 " + amount + " 绿宝石"), false);
+                            player.sendMessage(Text.literal("Withdrew " + amount + " emeralds"), false);
                             return 1;
                         }
                         return 0;
                     })))
-                // /EMet bankmoney
                 .then(CommandManager.literal("bankmoney")
                     .executes(ctx -> {
                         ServerPlayerEntity player = ctx.getSource().getPlayer();
                         if (player != null) {
                             BankAccount acc = BankStorage.getAccount(player.getUuid());
-                            player.sendMessage(Text.literal("银行余额: " + acc.balance + " 绿宝石"), false);
+                            player.sendMessage(Text.literal("Bank balance: " + acc.balance + " emeralds"), false);
                             return 1;
                         }
                         return 0;
                     }))
+                .then(CommandManager.literal("help")
+                    .executes(ctx -> {
+                        ctx.getSource().sendFeedback(() -> Text.literal(
+                            "=== EconomicMarket Commands ===\n" +
+                            "/EMet port <port> - Change web panel port\n" +
+                            "/EMet emerald - Check backpack emeralds\n" +
+                            "/EMet bankin <amount> - Deposit emeralds\n" +
+                            "/EMet bankout <amount> - Withdraw emeralds\n" +
+                            "/EMet bankmoney - Check bank balance\n" +
+                            "/EMet browser - Open in-game GUI\n" +
+                            "/EMet help - Show this help"
+                        ), false);
+                        return 1;
+                    }))
             );
         });
 
-        // 进服欢迎消息
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayerEntity player = handler.getPlayer();
             String ip = "localhost";
             try { ip = java.net.InetAddress.getLocalHost().getHostAddress(); } catch (Exception ignored) {}
             player.sendMessage(Text.literal(
-                "欢迎！市场面板已开启，访问 http://" + ip + ":" + currentPort +
-                " 或输入 /EMet browser 在游戏内打开。使用 /EMet help 查看更多命令"), false);
+                "Welcome! Market at http://" + ip + ":" + currentPort +
+                " or /EMet browser. /EMet help for commands."), false);
         });
 
         ServerTickEvents.END_SERVER_TICK.register(this::tick);
@@ -173,7 +181,6 @@ public class MarketMod implements ModInitializer {
             for (var player : server.getPlayerManager().getPlayerList()) {
                 CurrencyUtils.giveEmeralds(player, 1);
             }
-            // 银行利息 1%
             Map<UUID, BankAccount> accounts = BankStorage.loadAll();
             boolean changed = false;
             for (BankAccount acc : accounts.values()) {
