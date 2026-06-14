@@ -14,7 +14,6 @@ dependencies {
     mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
     modImplementation "net.fabricmc:fabric-loader:0.14.22"
     modImplementation "net.fabricmc.fabric-api:fabric-api:0.88.1+1.20.1"
-    // 无 MCEF 依赖
 }
 
 processResources {
@@ -22,5 +21,5 @@ processResources {
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }
 
-version = '1.1.0'
+version = '1.1.1'
 archivesBaseName = 'EconomicMarket'
